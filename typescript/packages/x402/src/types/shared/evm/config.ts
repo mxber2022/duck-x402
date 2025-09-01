@@ -29,6 +29,21 @@ export const config: Record<string, ChainConfig> = {
     usdcAddress: "0xe15fc38f6d8c56af07bbcbe3baf5708a2bf42392",
     usdcName: "USDC",
   },
+  // Kaia
+  "8217": {
+    usdcAddress: "0xFA96EF242473477fa2c53aa926928f5fF9ECf33a",
+    usdcName: "USDT",
+  },
+  // Kairos
+  "1001": {
+    usdcAddress: "0xd077a400968890eacc75cdc901f0356c943e4fdb",
+    usdcName: "USDC",
+  },
+  // DuckChain
+  "5545": {
+    usdcAddress: "0x0C524B4D3e083b29E464BD37fb16C2cB2c40D835", // TODO: Update with actual USDC address on DuckChain
+    usdcName: "DUCK",
+  },
 };
 
 export type ChainConfig = {
