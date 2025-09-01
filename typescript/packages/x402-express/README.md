@@ -1,18 +1,18 @@
-# x402-express
+# duck-x402express
 
-Express middleware integration for the x402 Payment Protocol. This package allows you to easily add paywall functionality to your Express.js applications using the x402 protocol.
+Express middleware integration for the DuckChain x402 Payment Protocol. This package allows you to easily add paywall functionality to your Express.js applications using the x402 protocol with support for multiple networks including DuckChain.
 
 ## Installation
 
 ```bash
-npm install x402-express
+npm install duck-x402express
 ```
 
 ## Quick Start
 
 ```typescript
 import express from "express";
-import { paymentMiddleware, Network } from "x402-express";
+import { paymentMiddleware, Network } from "duck-x402express";
 
 const app = express();
 
@@ -22,7 +22,7 @@ app.use(paymentMiddleware(
   {
     "/protected-route": {
       price: "$0.10",
-      network: "base-sepolia",
+      network: "duckchain", // Can also use: "base", "base-sepolia", "avalanche", "avalanche-fuji", "iotex", "sei", "sei-testnet", "kaia", "kairos"
       config: {
         description: "Access to premium content",
       }
@@ -39,6 +39,26 @@ app.get("/protected-route",
 
 app.listen(3000);
 ```
+
+## 🦆 DuckChain Support
+
+This package includes full support for DuckChain (Chain ID: 5545) with:
+- **Native Currency**: TON
+- **Token Support**: DUCK token at `0xda65892ea771d3268610337e9964d916028b7dad`
+- **RPC Endpoints**: `https://rpc.duckchain.io`, `https://rpc-hk.duckchain.io`
+- **Block Explorer**: `https://explorer.duckchain.io`
+
+## Supported Networks
+
+duck-x402express supports the following networks:
+
+- **Base**: `"base"` (mainnet), `"base-sepolia"` (testnet)
+- **Avalanche**: `"avalanche"` (mainnet), `"avalanche-fuji"` (testnet)  
+- **IoTeX**: `"iotex"` (mainnet)
+- **Sei**: `"sei"` (mainnet), `"sei-testnet"` (testnet)
+- **Kaia**: `"kaia"` (mainnet)
+- **Kairos**: `"kairos"` (mainnet)
+- **DuckChain**: `"duckchain"` (mainnet)
 
 ## Configuration
 
@@ -62,7 +82,7 @@ type RoutesConfig = Record<string, Price | RouteConfig>;
 
 interface RouteConfig {
   price: Price;           // Price in USD or token amount
-  network: Network;       // "base" or "base-sepolia"
+  network: Network;       // Supported networks: "base", "base-sepolia", "avalanche", "avalanche-fuji", "iotex", "sei", "sei-testnet", "kaia", "kairos", "duckchain"
   config?: PaymentMiddlewareConfig;
 }
 ```
@@ -102,11 +122,28 @@ type PaywallConfig = {
 };
 ```
 
+## 🚀 DuckChain Example
+
+```typescript
+app.use(paymentMiddleware(
+  "0xYourAddress",
+  {
+    "/duckchain-endpoint": {
+      price: "$0.01",
+      network: "duckchain", // 🦆 DuckChain support!
+      config: {
+        description: "DuckChain mainnet endpoint",
+      }
+    }
+  }
+));
+```
+
 ## Optional: Coinbase Onramp Integration
 
 **Note**: Onramp integration is completely optional. Your x402 paywall will work perfectly without it. This feature is for users who want to provide an easy way for their customers to fund their wallets directly from the paywall.
 
-When configured, a "Get more USDC" button will appear in your paywall, allowing users to purchase USDC directly through Coinbase Onramp.
+When configured, a "Get more USDC" button will appear in your x402 paywall, allowing users to purchase USDC directly through Coinbase Onramp.
 
 ### Quick Setup
 
@@ -116,7 +153,7 @@ Add a session token endpoint to your Express app:
 
 ```typescript
 import express from "express";
-import { POST } from "x402-express/session-token";
+import { POST } from "duck-x402express/session-token";
 
 const app = express();
 
@@ -188,12 +225,12 @@ Once set up, your x402 paywall will automatically show a "Get more USDC" button 
 3. **API route not found**
     - Ensure you've added the session token route: `app.post("/your-path", POST)`
     - Check that your route path matches your `sessionTokenEndpoint` configuration
-    - Verify the import: `import { POST } from "x402-express/session-token"`
+    - Verify the import: `import { POST } from "duck-x402express/session-token"`
     - Example: If you configured `sessionTokenEndpoint: "/api/custom/onramp"`, add `app.post("/api/custom/onramp", POST)`
-
 
 ## Resources
 
 - [x402 Protocol](https://x402.org)
 - [CDP Documentation](https://docs.cdp.coinbase.com)
 - [CDP Discord](https://discord.com/invite/cdp)
+- [DuckChain Explorer](https://explorer.duckchain.io)
