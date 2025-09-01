@@ -6,11 +6,11 @@ import {
   InternalAxiosRequestConfig,
 } from "axios";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { evm, PaymentRequirements } from "x402/types";
+import { evm, PaymentRequirements } from "duck-x402/types";
 import { withPaymentInterceptor } from "./index";
 
 // Mock the createPaymentHeader function
-vi.mock("x402/client", () => ({
+vi.mock("duck-x402/client", () => ({
   createPaymentHeader: vi.fn(),
   selectPaymentRequirements: vi.fn(),
 }));
@@ -82,7 +82,7 @@ describe("withPaymentInterceptor()", () => {
     } as unknown as typeof evm.SignerWallet;
 
     // Mock payment requirements selector
-    const { selectPaymentRequirements } = await import("x402/client");
+    const { selectPaymentRequirements } = await import("duck-x402/client");
     (selectPaymentRequirements as ReturnType<typeof vi.fn>).mockImplementation(
       (requirements, _) => requirements[0],
     );
