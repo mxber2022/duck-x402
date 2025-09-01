@@ -1,6 +1,6 @@
 {
-  "name": "x402",
-  "version": "0.4.2",
+  "name": "duck-x402",
+  "version": "0.1.1",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
   "types": "./dist/index.d.ts",
@@ -18,9 +18,12 @@
   },
   "keywords": [],
   "license": "Apache-2.0",
-  "author": "Coinbase Inc.",
-  "repository": "https://github.com/coinbase/x402",
-  "description": "x402 Payment Protocol",
+  "author": "Kaia",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mxber2022/duck-x402.git"
+  },
+  "description": "x402 Payment Protocol with Kaia chain support",
   "devDependencies": {
     "@coinbase/onchainkit": "^0.38.14",
     "@craftamap/esbuild-plugin-html": "^0.9.0",
@@ -123,6 +126,16 @@
       "require": {
         "types": "./dist/cjs/types/index.d.ts",
         "default": "./dist/cjs/types/index.js"
+      }
+    },
+    "./paywall/template": {
+      "import": {
+        "types": "./dist/esm/paywall/template.d.mts",
+        "default": "./dist/esm/paywall/template.mjs"
+      },
+      "require": {
+        "types": "./dist/cjs/paywall/template.d.ts",
+        "default": "./dist/cjs/paywall/template.js"
       }
     }
   },
