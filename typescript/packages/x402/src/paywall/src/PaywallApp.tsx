@@ -10,16 +10,101 @@ import {
 } from "@coinbase/onchainkit/wallet";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPublicClient, formatUnits, http, publicActions } from "viem";
-import { base, baseSepolia } from "viem/chains";
+import { 
+  base, 
+  baseSepolia, 
+  avalanche, 
+  avalancheFuji, 
+  iotex, 
+  sei, 
+  seiTestnet, 
+  kaia, 
+  kairos 
+} from "viem/chains";
 import { useAccount, useSwitchChain, useWalletClient } from "wagmi";
 
 import { selectPaymentRequirements } from "../../client";
 import { exact } from "../../schemes";
 import { getUSDCBalance } from "../../shared/evm";
+import { EvmNetworkToChainId, Network } from "../../types/shared";
+import { config } from "../../types/shared/evm/config";
+import { duckchain } from "../../types/shared/evm/chains";
 
 import { Spinner } from "./Spinner";
 import { useOnrampSessionToken } from "./useOnrampSessionToken";
 import { ensureValidAmount } from "./utils";
+
+/**
+ * Maps network names to their corresponding viem Chain objects
+ */
+function getChainFromNetwork(network: Network) {
+  switch (network) {
+    case "base":
+      return base;
+    case "base-sepolia":
+      return baseSepolia;
+    case "avalanche":
+      return avalanche;
+    case "avalanche-fuji":
+      return avalancheFuji;
+    case "iotex":
+      return iotex;
+    case "sei":
+      return sei;
+    case "sei-testnet":
+      return seiTestnet;
+    case "kaia":
+      return kaia;
+    case "kairos":
+      return kairos;
+    case "duckchain":
+      return duckchain;
+    default:
+      throw new Error(`Unsupported network: ${network}`);
+  }
+}
+
+/**
+ * Gets a human-readable chain name for display
+ */
+function getChainDisplayName(network: Network): string {
+  switch (network) {
+    case "base":
+      return "Base";
+    case "base-sepolia":
+      return "Base Sepolia";
+    case "avalanche":
+      return "Avalanche";
+    case "avalanche-fuji":
+      return "Avalanche Fuji";
+    case "iotex":
+      return "IoTeX";
+    case "sei":
+      return "Sei";
+    case "sei-testnet":
+      return "Sei Testnet";
+    case "kaia":
+      return "Kaia";
+    case "kairos":
+      return "Kairos";
+    case "duckchain":
+      return "DuckChain";
+    default:
+      return network;
+  }
+}
+
+/**
+ * Gets the token name for the given network
+ */
+function getTokenName(network: Network): string {
+  const chainId = EvmNetworkToChainId.get(network);
+  if (!chainId) {
+    return "USDC"; // fallback
+  }
+  const chainConfig = config[chainId.toString()];
+  return chainConfig?.usdcName || "USDC"; // fallback to USDC if not found
+}
 
 /**
  * Main Paywall App Component
@@ -40,11 +125,24 @@ export function PaywallApp() {
 
   const x402 = window.x402;
   const amount = x402.amount || 0;
-  const testnet = x402.testnet ?? true;
-  const paymentChain = testnet ? baseSepolia : base;
-  const chainName = testnet ? "Base Sepolia" : "Base";
-  const network = testnet ? "base-sepolia" : "base";
-  const showOnramp = Boolean(!testnet && isConnected && x402.sessionTokenEndpoint);
+  
+  // Extract network from payment requirements instead of using hardcoded testnet logic
+  const rawPaymentRequirements = x402?.paymentRequirements;
+  const network: Network = useMemo(() => {
+    if (rawPaymentRequirements && Array.isArray(rawPaymentRequirements) && rawPaymentRequirements.length > 0) {
+      return rawPaymentRequirements[0].network as Network;
+    }
+    // Fallback to base-sepolia for backward compatibility
+    return "base-sepolia";
+  }, [rawPaymentRequirements]);
+
+  const paymentChain = getChainFromNetwork(network);
+  const chainName = getChainDisplayName(network);
+  const tokenName = getTokenName(network);
+  
+  // Show onramp only for mainnet networks (not testnets) and when session token endpoint is available
+  const isMainnet = !network.includes("testnet") && !network.includes("sepolia");
+  const showOnramp = Boolean(isMainnet && isConnected && x402.sessionTokenEndpoint);
 
   useEffect(() => {
     if (address) {
@@ -58,7 +156,7 @@ export function PaywallApp() {
     transport: http(),
   }).extend(publicActions);
 
-  const paymentRequirements = x402
+  const selectedPaymentRequirements = x402
     ? selectPaymentRequirements([x402.paymentRequirements].flat(), network, "exact")
     : null;
 
@@ -122,7 +220,7 @@ export function PaywallApp() {
   }, [switchChainAsync, paymentChain, isCorrectChain]);
 
   const handlePayment = useCallback(async () => {
-    if (!address || !x402 || !paymentRequirements) {
+    if (!address || !x402 || !selectedPaymentRequirements) {
       return;
     }
 
@@ -139,15 +237,18 @@ export function PaywallApp() {
     setIsPaying(true);
 
     try {
-      setStatus("Checking USDC balance...");
+      setStatus(`Checking ${tokenName} balance...`);
       const balance = await getUSDCBalance(publicClient, address);
 
       if (balance === 0n) {
-        throw new Error(`Insufficient balance. Make sure you have USDC on ${chainName}`);
+        throw new Error(`Insufficient balance. Make sure you have ${tokenName} on ${chainName}`);
       }
 
       setStatus("Creating payment signature...");
-      const validPaymentRequirements = ensureValidAmount(paymentRequirements);
+      if (!selectedPaymentRequirements) {
+        throw new Error("No payment requirements found");
+      }
+      const validPaymentRequirements = ensureValidAmount(selectedPaymentRequirements);
       const initialPayment = await exact.evm.createPayment(
         walletClient,
         1,
@@ -202,9 +303,9 @@ export function PaywallApp() {
     } finally {
       setIsPaying(false);
     }
-  }, [address, x402, paymentRequirements, publicClient, paymentChain, handleSwitchChain]);
+  }, [address, x402, selectedPaymentRequirements, publicClient, paymentChain, handleSwitchChain]);
 
-  if (!x402 || !paymentRequirements) {
+  if (!x402 || !selectedPaymentRequirements) {
     return (
       <div className="container">
         <div className="header">
@@ -220,12 +321,12 @@ export function PaywallApp() {
       <div className="header">
         <h1 className="title">Payment Required</h1>
         <p>
-          {paymentRequirements.description && `${paymentRequirements.description}.`} To access this
-          content, please pay ${amount} {chainName} USDC.
+          {selectedPaymentRequirements?.description && `${selectedPaymentRequirements.description}.`} To access this
+          content, please pay ${amount} {chainName} {tokenName}.
         </p>
-        {testnet && (
+        {network.includes("testnet") && (
           <p className="instructions">
-            Need Base Sepolia USDC?{" "}
+            Need {chainName} {tokenName}?{" "}
             <a href="https://faucet.circle.com/" target="_blank" rel="noopener noreferrer">
               Get some <u>here</u>.
             </a>
@@ -257,14 +358,14 @@ export function PaywallApp() {
                 <span className="payment-value">
                   <button className="balance-button" onClick={() => setHideBalance(prev => !prev)}>
                     {formattedUsdcBalance && !hideBalance
-                      ? `$${formattedUsdcBalance} USDC`
-                      : "••••• USDC"}
+                      ? `$${formattedUsdcBalance} ${tokenName}`
+                      : `••••• ${tokenName}`}
                   </button>
                 </span>
               </div>
               <div className="payment-row">
                 <span className="payment-label">Amount:</span>
-                <span className="payment-value">${amount} USDC</span>
+                <span className="payment-value">${amount} {tokenName}</span>
               </div>
               <div className="payment-row">
                 <span className="payment-label">Network:</span>
@@ -277,7 +378,7 @@ export function PaywallApp() {
                 {showOnramp && (
                   <FundButton
                     fundingUrl={onrampBuyUrl}
-                    text="Get more USDC"
+                    text={`Get more ${tokenName}`}
                     hideIcon
                     className="button button-positive"
                   />
